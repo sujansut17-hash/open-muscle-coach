@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open Muscle Coach</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+:root{--bg:#eef2f6;--card:#fff;--ink:#14213d;--mute:#5a6b82;--line:#d3dce6;--base:#dbe3ec;--hot:#c8312b;--hotbg:#fbe4e2;--ok:#1f6f5c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1722;--card:#18222f;--ink:#e8eef6;--mute:#9fb0c4;--line:#2b3a4c;--base:#263547;--hot:#ff6b60;--hotbg:#3a1f22;--ok:#5fd0b0}}
+:root[data-theme="dark"]{--bg:#0f1722;--card:#18222f;--ink:#e8eef6;--mute:#9fb0c4;--line:#2b3a4c;--base:#263547;--hot:#ff6b60;--hotbg:#3a1f22;--ok:#5fd0b0}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",sans-serif;margin:0;letter-spacing:.2px}
+h1{font-size:2.4rem;line-height:1}h2{font-size:1.5rem}h3{font-size:1.25rem}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 48px}
+.lead{color:var(--mute);margin:6px 0 20px;max-width:60ch}
+.grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card+.card{margin-top:16px}
+.tabs{display:flex;gap:8px;margin:10px 0}
+button,.chip{font:inherit;color:var(--ink)}
+.tab,.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;cursor:pointer}
+.tab[aria-pressed="true"],.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+svg{width:100%;max-width:240px;display:block;margin:0 auto}
+.base{fill:var(--base)}
+.m{fill:var(--line);stroke:var(--card);stroke-width:1.5;cursor:pointer;transition:fill .15s}
+.m:hover{fill:var(--hot);opacity:.6}
+g[aria-pressed="true"] .m{fill:var(--hot);opacity:1}
+g:focus-visible{outline:none}g:focus-visible .m{stroke:var(--ink);stroke-width:3}
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+select{width:100%;font:inherit;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.note{font-size:.85rem;color:var(--mute)}
+.ex{border-top:1px solid var(--line);padding:14px 0}
+.ex:first-of-type{border-top:0}
+.dose{display:flex;flex-wrap:wrap;gap:6px 18px;margin:6px 0;font-weight:600}
+.dose span{color:var(--hot)}
+.tag{display:inline-block;background:var(--hotbg);color:var(--hot);border-radius:6px;padding:1px 8px;font-size:.8rem;margin:0 6px 4px 0}
+.ok{background:var(--card);color:var(--ok);border:1px solid var(--ok)}
+details{margin-top:6px}summary{cursor:pointer;color:var(--mute)}
+.coach p{margin:.5rem 0}
+.empty{color:var(--mute)}
+.warn{border-left:4px solid var(--hot);padding-left:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Open Muscle Coach</h1>
+<p class="lead">Pick the muscles you want to train, your goal or sport, and the equipment you have. You get a plan with the why, the how, and the dose. Free and non-profit.</p>
+<div class="grid">
+<div>
+<div class="card">
+<h2>1. Choose muscles</h2>
+<div class="tabs"><button class="tab" id="tf" aria-pressed="true">Front</button><button class="tab" id="tb" aria-pressed="false">Back</button></div>
+<svg id="body" viewBox="0 0 200 380" role="group" aria-label="Muscle map"></svg>
+<div class="chips" id="mchips"></div>
+</div>
+<div class="card">
+<h2>2. Goal and sport</h2>
+<label class="f" for="goal">Main goal</label>
+<select id="goal"></select>
+<label class="f" for="sport">Sport (optional)</label>
+<select id="sport"></select>
+</div>
+<div class="card">
+<h2>3. Your equipment</h2>
+<p class="note">Bodyweight exercises are always included.</p>
+<div class="chips" id="echips"></div>
+</div>
+</div>
+<div>
+<div class="card" id="out"></div>
+<div class="card coach" id="coach"></div>
+<div class="card warn note">General fitness information, not medical advice. Stop if you feel sharp pain, dizziness or chest discomfort. If you have an injury, a medical condition, or are pregnant, check with a doctor or physiotherapist first.</div>
+</div>
+</div>
+</div>
+<script>
+var MUS={chest:"Chest",shoulders:"Shoulders",biceps:"Biceps",triceps:"Triceps",forearms:"Forearms",abs:"Abs and obliques",back:"Back and lats",lowback:"Lower back",glutes:"Glutes",quads:"Quads",hamstrings:"Hamstrings",calves:"Calves"};
+var EQ={bodyweight:"No equipment",dumbbell:"Dumbbells",barbell:"Barbell",band:"Resistance band",bar:"Pull-up bar",kettlebell:"Kettlebell"};
+function E(a,b){return '<ellipse cx="'+a+'" cy="'+b[0]+'" rx="'+b[1]+'" ry="'+b[2]+'"/>'}
+function pair(y,rx,ry,dx){return E(100-dx,[y,rx,ry])+E(100+dx,[y,rx,ry])}
+var SH=pair(80,13,12,38),AR=pair(115,8,19,51),FA=pair(155,7,21,58),CF=pair(330,10,30,19);
+var VIEW={
+front:{shoulders:SH,chest:pair(96,15,13,15),biceps:AR,forearms:FA,abs:'<rect x="87" y="114" width="26" height="52" rx="8"/>',quads:pair(228,15,40,17),calves:CF},
+back:{shoulders:SH,back:'<path d="M100 74L132 88L126 128L74 128L68 88Z"/>',triceps:AR,forearms:FA,lowback:'<rect x="86" y="132" width="28" height="28" rx="8"/>',glutes:pair(186,15,15,13),hamstrings:pair(245,14,36,17),calves:CF}
+};
+var BASE='<circle class="base" cx="100" cy="30" r="15"/><rect class="base" x="94" y="42" width="12" height="16"/><rect class="base" x="70" y="62" width="60" height="118" rx="22"/><rect class="base" x="36" y="86" width="20" height="100" rx="10"/><rect class="base" x="144" y="86" width="20" height="100" rx="10"/><rect class="base" x="70" y="176" width="28" height="190" rx="14"/><rect class="base" x="102" y="176" width="28" height="190" rx="14"/>';
+// id, name, muscles, equipment, how, mistake, why, power
+var EX=[
+["pushup","Push-up",["chest","triceps","shoulders"],"bodyweight","Hands just wider than shoulders, body in one straight line, lower until your chest is a fist above the floor.","Sagging hips or elbows flared out to 90°. Keep elbows about 45° from your body.","Builds pressing strength and shoulder stability anywhere."],
+["dbpress","Dumbbell bench press",["chest","triceps","shoulders"],"dumbbell","Lie on a bench or the floor, lower until upper arms are level with your torso, press up over the chest.","Bouncing the weights or over-arching the lower back.","Loaded chest work with a deeper stretch than push-ups."],
+["bbbench","Barbell bench press",["chest","triceps","shoulders"],"barbell","Pinch shoulder blades, plant your feet, lower the bar to mid-chest, press in a slight arc.","Lifting hips off the bench, or going heavy without a spotter.","The best loadable press for maximal chest strength."],
+["bandpress","Band chest press",["chest","triceps"],"band","Anchor the band behind you at chest height, press forward, control the return.","Letting the band snap back.","Joint-friendly chest work with only a band."],
+["dbohp","Dumbbell overhead press",["shoulders","triceps"],"dumbbell","Stand tight, ribs down, press straight overhead until arms lock, lower to the shoulders.","Leaning back to push the weight up.","Strong shoulders protect the joint and add punching and throwing power."],
+["pike","Pike push-up",["shoulders","triceps"],"bodyweight","Hips high in an inverted V, lower your head toward the floor between your hands, press back up.","Turning it into a regular push-up by dropping the hips.","Overhead pressing strength with no equipment."],
+["pullup","Pull-up",["back","biceps","forearms"],"bar","Hang with shoulders down, pull your chest toward the bar, lower slowly to a full hang.","Kicking or swinging, and half reps.","The best bodyweight builder for lats and grip."],
+["dbrow","One-arm dumbbell row",["back","biceps"],"dumbbell","Hand and knee on a bench, flat back, pull the weight toward your hip, squeeze, lower slowly.","Twisting the torso to heave the weight.","Balances all the pushing and protects the shoulders."],
+["bandrow","Band row",["back","biceps"],"band","Sit tall with the band around your feet or a post, pull elbows back, squeeze shoulder blades.","Shrugging shoulders toward the ears.","Back work with minimal equipment."],
+["bbrow","Barbell row",["back","lowback","biceps"],"barbell","Hinge to about 45°, flat back, pull the bar to your lower ribs, lower under control.","Rounding the back or using momentum.","Heavy back thickness and posture strength."],
+["superman","Superman hold",["lowback","glutes"],"bodyweight","Lie face down, lift arms and legs a few centimetres, hold while breathing steadily.","Craning the neck upward.","Gentle lower-back endurance without equipment.",0,1],
+["dbcurl","Dumbbell curl",["biceps","forearms"],"dumbbell","Elbows pinned at your sides, curl up, lower for a 2 to 3 second count.","Swinging the torso.","Direct arm strength and size."],
+["bandcurl","Band curl",["biceps"],"band","Stand on the band, elbows at your sides, curl and lower slowly.","Letting the elbows drift forward.","Arm training you can do anywhere."],
+["chairdip","Chair dip",["triceps","chest","shoulders"],"bodyweight","Hands on a sturdy chair edge, legs out, lower until elbows reach about 90°, press up.","Shoulders rolling forward or going too deep.","Triceps strength using furniture."],
+["dbtri","Overhead triceps extension",["triceps"],"dumbbell","Hold one dumbbell overhead with both hands, lower behind your head, extend fully.","Elbows flaring wide.","Targets the long head of the triceps."],
+["wrist","Wrist curl",["forearms"],"dumbbell","Forearm on your thigh, palm up, curl the weight up using only the wrist, lower slowly.","Using too much weight.","Grip and forearm strength for hitting, throwing and carrying."],
+["carry","Farmer’s carry",["forearms","abs","back"],"kettlebell","Hold a heavy weight in each hand (or one side), stand tall, walk with short steady steps.","Leaning sideways or shrugging.","Grip, core and posture strength in one move.",0,1],
+["plank","Plank",["abs","shoulders"],"bodyweight","Forearms down, body in a straight line, squeeze glutes and abs, breathe steadily.","Sagging hips or lifting them too high.","Core stiffness that transfers force between legs and arms.",0,1],
+["deadbug","Dead bug",["abs"],"bodyweight","Lie on your back, lower back pressed down, extend opposite arm and leg slowly, switch.","Lower back arching off the floor.","Core control for running and rotation."],
+["twist","Russian twist",["abs"],"bodyweight","Sit leaning back, feet down or raised, rotate your torso side to side with control.","Only swinging the arms.","Rotational core strength for punching, batting and throwing."],
+["squat","Bodyweight squat",["quads","glutes"],"bodyweight","Feet shoulder-width, sit hips back and down, knees track over toes, stand up tall.","Knees caving inward or heels lifting.","Foundation leg pattern for every sport."],
+["goblet","Goblet squat",["quads","glutes","abs"],"kettlebell","Hold the weight at your chest, elbows inside the knees, squat deep with an upright torso.","Collapsing forward.","Loaded squat that teaches good posture."],
+["bbsquat","Barbell back squat",["quads","glutes","lowback"],"barbell","Bar on your upper back, brace your core, squat to at least parallel, drive up through the mid-foot.","Rounding the lower back or squatting without safety racks.","The strongest all-round lower body builder."],
+["lunge","Walking lunge",["quads","glutes","hamstrings"],"bodyweight","Long step, drop the back knee toward the floor, push through the front heel to step forward.","Front knee collapsing inward or too short a step.","Single-leg strength and balance, which matches how you run and move."],
+["bridge","Glute bridge",["glutes","hamstrings","lowback"],"bodyweight","Lie on your back, feet flat, push hips up until body is straight, squeeze glutes, lower.","Overarching the back at the top.","Wakes up the glutes that power running and jumping."],
+["rdl","Dumbbell Romanian deadlift",["hamstrings","glutes","lowback"],"dumbbell","Soft knees, push hips back with weights sliding down your thighs, flat back, stand up squeezing glutes.","Rounding the back or squatting the move.","Hamstring strength lowers sprinting injury risk."],
+["deadlift","Barbell deadlift",["hamstrings","glutes","lowback","back","forearms"],"barbell","Bar over mid-foot, flat back, push the floor away, lock out hips and knees together.","Jerking the bar off the floor or rounding the back.","The best total-body pulling strength builder."],
+["swing","Kettlebell swing",["glutes","hamstrings","lowback"],"kettlebell","Hinge back, snap the hips forward so the bell floats to chest height, let it fall back between the legs.","Squatting it or lifting with the arms.","Explosive hip power for punching, sprinting and jumping.",1],
+["calf","Single-leg calf raise",["calves"],"bodyweight","Stand on one foot on a step edge, rise high, pause, lower below the step slowly.","Bouncing through the move.","Calves and Achilles absorb and return force on every stride."],
+["jsquat","Jump squat",["quads","glutes","calves"],"bodyweight","Squat down, jump up as high as you can, land softly with bent knees, reset each rep.","Landing stiff-legged.","Trains explosive power for sprints, kicks and jumps.",1]
+];
+var GOAL={
+muscle:{n:"Build muscle",sets:"3 to 4",reps:"8 to 12",rest:"60 to 90 s",time:"30 to 60 s",eat:"Aim for about 1.6 to 2.2 g of protein per kg of body weight daily, split across 3 to 5 meals, with a small calorie surplus.",rest2:"Leave about 48 hours before hitting the same muscle hard again, and sleep 7 to 9 hours."},
+strength:{n:"Get stronger",sets:"4 to 5",reps:"3 to 6",rest:"2 to 3 min",time:"20 to 30 s",eat:"Eat enough overall. Protein around 1.6 g per kg, and carbohydrates before heavy sessions help you lift more.",rest2:"Rest 2 to 3 minutes between heavy sets and 48 to 72 hours before repeating heavy lifts."},
+fatloss:{n:"Lose fat",sets:"3",reps:"12 to 15",rest:"30 to 45 s",time:"30 to 45 s",eat:"A modest calorie deficit with high protein protects muscle. Choose filling whole foods: dal, eggs, curd, vegetables.",rest2:"Add daily walking. Keep 1 to 2 full rest days a week and sleep 7 to 9 hours."},
+endurance:{n:"Build endurance",sets:"2 to 3",reps:"15 to 25",rest:"30 s",time:"45 to 60 s",eat:"Carbohydrates fuel long sessions. Drink water regularly, and add electrolytes for sessions over an hour or in heat.",rest2:"Keep 1 to 2 easy days a week and increase volume by no more than about 10% a week."},
+power:{n:"Explosive power",sets:"4",reps:"3 to 5 (fast)",rest:"2 min",time:"20 s",eat:"Eat carbohydrates and protein 2 to 3 hours before, and keep sessions fresh rather than exhausting.",rest2:"Quality beats quantity. Stop each set while you are still fast, and rest fully between sets."}
+};
+var SPORT={
+none:{n:"No specific sport",ids:[],dem:"",sec:"",eat:"",rest:"",need:""},
+boxing:{n:"Boxing",ids:["pushup","dbohp","pike","twist","plank","swing","carry","jsquat","dbrow","pullup"],dem:"rotational power, shoulder endurance and a strong core",sec:"Power starts from the floor. Punches are driven by the legs and hips, not the arm. Train hip drive and rotation before arm size.",eat:"Carbohydrates 2 to 3 hours before sparring, protein and carbohydrates within 2 hours after. Cut weight only under a coach’s guidance.",rest:"Keep heavy lifting away from key sparring days, with about 48 hours between hard strength sessions.",need:"Boxing gloves and hand wraps. A skipping rope is the best cheap extra."},
+running:{n:"Running",ids:["lunge","calf","bridge","rdl","plank","goblet","jsquat","deadbug","squat"],dem:"calf and Achilles stiffness, strong glutes and hip stability",sec:"Many running injuries are strength gaps, not too many kilometres. Calves, glutes and hips absorb a few times your body weight on every stride.",eat:"Carbohydrates before long runs. On runs over 60 to 75 minutes, take carbs and fluids during, then carbs and protein afterwards.",rest:"Put strength sessions away from your hardest run days, and keep 1 to 2 easy days each week.",need:"Properly fitted running shoes, replaced about every 600 to 800 km."},
+football:{n:"Football",ids:["squat","lunge","jsquat","rdl","calf","bridge","plank","goblet","swing"],dem:"sprint speed, single-leg strength and hamstring durability",sec:"Hamstring strength is your best protection against sprint injuries. Train the hip hinge, not just squats.",eat:"Carbohydrate-rich meal 3 to 4 hours before matches, protein and carbs within 2 hours after, and sip fluids through the day.",rest:"Strength training two days after a match is usually a good fit. Keep the day before a match light.",need:"Boots that fit and shin guards."},
+cricket:{n:"Cricket",ids:["dbohp","twist","lunge","rdl","plank","pullup","carry","bridge","dbrow","squat"],dem:"hip and core rotation, single-leg stability and shoulder health",sec:"Fast bowlers get pace from a braced front leg and the hips turning ahead of the shoulders. Build single-leg strength and rotational core power.",eat:"In hot weather, drink water through the day and add a pinch of salt and sugar (nimbu pani) in long sessions. Dal, curd, eggs or paneer cover protein.",rest:"Give bowlers rest days between heavy spells and keep gym work lighter before matches.",need:"Gear for your role, plus a resistance band for shoulder care."}
+};
+var S={m:{},eq:{bodyweight:1},view:"front"};
+var $=function(i){return document.getElementById(i)};
+function opts(sel,obj){$(sel).innerHTML=Object.keys(obj).map(function(k){return '<option value="'+k+'">'+obj[k].n+'</option>'}).join('')}
+opts("goal",GOAL);opts("sport",SPORT);$("goal").value="muscle";
+function drawBody(){
+ var v=VIEW[S.view],h=BASE;
+ for(var k in v){h+='<g data-m="'+k+'" role="button" tabindex="0" aria-label="'+MUS[k]+'" aria-pressed="'+!!S.m[k]+'"><g class="m-wrap">'+v[k].replace(/<(ellipse|rect|path)/g,'<$1 class="m"')+'</g></g>'}
+ $("body").innerHTML=h;
+ Array.prototype.forEach.call($("body").querySelectorAll("g[data-m]"),function(g){
+  g.onclick=function(){tog(g.dataset.m)};
+  g.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(g.dataset.m)}};
+ });
+}
+function tog(k){S.m[k]=!S.m[k];if(!S.m[k])delete S.m[k];drawBody();drawChips();show()}
+function drawChips(){
+ $("mchips").innerHTML=Object.keys(MUS).map(function(k){return '<button class="chip" data-k="'+k+'" aria-pressed="'+!!S.m[k]+'">'+MUS[k]+'</button>'}).join("");
+ Array.prototype.forEach.call($("mchips").children,function(b){b.onclick=function(){tog(b.dataset.k)}});
+ $("echips").innerHTML=Object.keys(EQ).filter(function(k){return k!=="bodyweight"}).map(function(k){return '<button class="chip" data-k="'+k+'" aria-pressed="'+!!S.eq[k]+'">'+EQ[k]+'</button>'}).join("");
+ Array.prototype.forEach.call($("echips").children,function(b){b.onclick=function(){var k=b.dataset.k;S.eq[k]=!S.eq[k];drawChips();show()}});
+}
+function setView(v){S.view=v;$("tf").setAttribute("aria-pressed",v==="front");$("tb").setAttribute("aria-pressed",v==="back");drawBody()}
+$("tf").onclick=function(){setView("front")};$("tb").onclick=function(){setView("back")};
+$("goal").onchange=show;$("sport").onchange=show;
+function show(){
+ var sel=Object.keys(S.m),g=GOAL[$("goal").value],sp=SPORT[$("sport").value],o=$("out");
+ if(!sel.length){o.innerHTML='<h2>Your workout</h2><p class="empty">Tap one or more muscles on the body map to see exercises.</p>';coach(g,sp);return}
+ var list=EX.filter(function(e){return S.eq[e[3]]&&e[2].some(function(m){return S.m[m]})}).map(function(e){
+  var hit=e[2].filter(function(m){return S.m[m]}),sc=hit.length*2+(sp.ids.indexOf(e[0])>-1?3:0)+($("goal").value==="power"&&e[7]?2:0)+(e[3]==="bodyweight"?.1:0);
+  return{e:e,hit:hit,sc:sc}}).sort(function(a,b){return b.sc-a.sc}).slice(0,7);
+ var h='<h2>Your workout</h2><p class="note">Muscles: '+sel.map(function(k){return MUS[k]}).join(", ")+'. Goal: '+g.n+(sp.ids.length?'. Sport: '+sp.n:'')+'.</p>';
+ if(!list.length)h+='<p class="empty">No exercises match with your current equipment. Select more equipment or other muscles.</p>';
+ list.forEach(function(x){
+  var e=x.e,t=e[6]?1:0,pre=sp.ids.indexOf(e[0])>-1;
+  h+='<div class="ex"><h3>'+e[1]+'</h3><div>'+x.hit.map(function(m){return '<span class="tag">'+MUS[m]+'</span>'}).join("")+(pre?'<span class="tag ok">Useful for '+sp.n.toLowerCase()+'</span>':'')+'</div>'
+  +'<div class="dose"><div>Sets <span>'+g.sets+'</span></div><div>'+(e[8]?'Hold':'Reps')+' <span>'+(e[8]?g.time:g.reps)+'</span></div><div>Rest <span>'+g.rest+'</span></div></div>'
+  +'<p><b>Why:</b> '+e[6]+(pre?' It also supports '+sp.dem+'.':'')+'</p>'
+  +'<details><summary>How to do it</summary><p>'+e[4]+'</p><p><b>Avoid:</b> '+e[5]+'</p><p class="note">3D animated guide: coming in the next version.</p></details></div>';
+ });
+ o.innerHTML=h;coach(g,sp);
+}
+function coach(g,sp){
+ var h='<h2>Coach notes</h2>';
+ if(sp.sec)h+='<p><b>'+sp.n+' secret:</b> '+sp.sec+'</p><p><b>Absolute essentials:</b> '+sp.need+'</p>';
+ h+='<p><b>Eating:</b> '+g.eat+(sp.eat?' '+sp.eat:'')+'</p><p><b>Rest:</b> '+g.rest2+(sp.rest?' '+sp.rest:'')+'</p>';
+ $("coach").innerHTML=h;
+}
+drawBody();drawChips();show();
+</script>
+</body>
+</html>
